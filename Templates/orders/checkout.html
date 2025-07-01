@@ -12,9 +12,14 @@
                     <h4><i class="fas fa-shopping-cart"></i> Checkout</h4>
                 </div>
                 <div class="card-body">
-                    <form method="post">
+                    <form method="post" id="checkout-form">
                         {% csrf_token %}
                         {{ form|crispy }}
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-success btn-lg" id="place-order-btn">
+                                <i class="fas fa-credit-card"></i> Place Order - ${{ cart.total_price }}
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -76,4 +81,76 @@
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sameAsBillingCheckbox = document.getElementById('id_same_as_billing');
+    const shippingFields = [
+        'id_shipping_name',
+        'id_shipping_address',
+        'id_shipping_city',
+        'id_shipping_state',
+        'id_shipping_zipcode',
+        'id_shipping_country'
+    ];
+    
+    // Function to toggle shipping fields
+    function toggleShippingFields() {
+        const isChecked = sameAsBillingCheckbox.checked;
+        shippingFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.closest('.form-group').style.display = isChecked ? 'none' : 'block';
+                if (isChecked) {
+                    field.value = '';
+                }
+            }
+        });
+    }
+    
+    // Function to copy billing to shipping
+    function copyBillingToShipping() {
+        if (sameAsBillingCheckbox.checked) {
+            document.getElementById('id_shipping_name').value = document.getElementById('id_billing_name').value;
+            document.getElementById('id_shipping_address').value = document.getElementById('id_billing_address').value;
+            document.getElementById('id_shipping_city').value = document.getElementById('id_billing_city').value;
+            document.getElementById('id_shipping_state').value = document.getElementById('id_billing_state').value;
+            document.getElementById('id_shipping_zipcode').value = document.getElementById('id_billing_zipcode').value;
+            document.getElementById('id_shipping_country').value = document.getElementById('id_billing_country').value;
+        }
+    }
+    
+    // Initial setup
+    if (sameAsBillingCheckbox) {
+        toggleShippingFields();
+        sameAsBillingCheckbox.addEventListener('change', toggleShippingFields);
+        
+        // Copy billing info when billing fields change
+        const billingFields = [
+            'id_billing_name',
+            'id_billing_address',
+            'id_billing_city',
+            'id_billing_state',
+            'id_billing_zipcode',
+            'id_billing_country'
+        ];
+        
+        billingFields.forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('input', copyBillingToShipping);
+            }
+        });
+    }
+    
+    // Form submission handling
+    const form = document.getElementById('checkout-form');
+    const submitBtn = document.getElementById('place-order-btn');
+    
+    form.addEventListener('submit', function(e) {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        submitBtn.disabled = true;
+    });
+});
+</script>
 {% endblock %}

@@ -24,6 +24,31 @@ class OrderDetailView(LoginRequiredMixin, DetailView):
     
     def get_queryset(self):
         return Order.objects.filter(user=self.request.user)
+    
+@login_required
+def cancel_order_view(request, pk):
+    order = get_object_or_404(Order, pk=pk, user=request.user)
+
+    if request.method == 'POST':
+        if order.status != 'pending':
+            messages.error(request, 'Only pending orders can be cancelled.')
+        else:
+            with transaction.atomic():
+                order.status = 'cancelled'
+                order.save()
+
+                # Restore stock
+                for item in order.items.select_related('product'):
+                    item.product.stock = F('stock') + item.quantity
+                    item.product.save()
+
+            messages.success(request, f'Order #{order.order_number} has been cancelled.')
+    else:
+        messages.error(request, 'Invalid request method.')
+
+    return redirect('orders:list')
+
+from django.db.models import F
 
 @login_required
 def checkout_view(request):
@@ -37,6 +62,13 @@ def checkout_view(request):
         form = CheckoutForm(request.POST)
         if form.is_valid():
             with transaction.atomic():
+                # Stock check
+                for cart_item in cart.items.select_related('product'):
+                    product = cart_item.product
+                    if product.stock < cart_item.quantity:
+                        messages.error(request, f"Not enough stock for '{product.name}'. Only {product.stock} left.")
+                        return redirect('cart:view')
+                
                 # Create order
                 order = Order.objects.create(
                     user=request.user,
@@ -57,19 +89,20 @@ def checkout_view(request):
                     shipping_country=form.cleaned_data['shipping_country'],
                 )
                 
-                # Create order items
-                for cart_item in cart.items.all():
+                # Create order items and deduct stock safely
+                for cart_item in cart.items.select_related('product'):
+                    product = cart_item.product
+                    
                     OrderItem.objects.create(
                         order=order,
-                        product=cart_item.product,
-                        product_name=cart_item.product.name,
-                        product_price=cart_item.product.price,
+                        product=product,
+                        product_name=product.name,
+                        product_price=product.price,
                         quantity=cart_item.quantity
                     )
                     
-                    # Update product stock
-                    product = cart_item.product
-                    product.stock -= cart_item.quantity
+                    # Safely decrement stock
+                    product.stock = F('stock') - cart_item.quantity
                     product.save()
                 
                 # Clear cart

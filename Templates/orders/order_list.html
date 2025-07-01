@@ -58,7 +58,10 @@
                                     <div class="col-md-4 text-end">
                                         <a href="{% url 'orders:detail' order.pk %}" class="btn btn-primary">View Details</a>
                                         {% if order.status == 'pending' %}
-                                            <button class="btn btn-outline-danger btn-sm mt-2">Cancel Order</button>
+                                            <form method="post" action="{% url 'orders:cancel' order.pk %}" style="display:inline;">
+                                                {% csrf_token %}
+                                                <button type="submit" class="btn btn-outline-danger btn-sm mt-2">Cancel Order</button>
+                                            </form>
                                         {% endif %}
                                     </div>
                                 </div>
