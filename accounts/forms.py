@@ -6,27 +6,19 @@ from crispy_forms.layout import Layout, Submit, Row, Column
 
 User = get_user_model()
 
-#formulario de signup
 class SignUpForm(UserCreationForm):
-    #Campos apresentados, todos são necessários
     email = forms.EmailField(required=True)
     first_name = forms.CharField(max_length=30, required=True)
     last_name = forms.CharField(max_length=30, required=True)
     
-    # requerimentos
     class Meta:
         model = User
         fields = ('username', 'email', 'first_name', 'last_name', 'password1', 'password2')
     
     def __init__(self, *args, **kwargs):
-        # init com os argumentos da classe pai
         super().__init__(*args, **kwargs)
-        
-        # django-crispy-forms implements a class called FormHelper that defines the form 
-        # rendering behavior. Helpers give you a way to control form attributes and its layout, 
-        # doing this in a programmatic way using Python. This way you write as little HTML as 
-        # possible, and all your logic stays in the forms and views files.
         self.helper = FormHelper()
+        self.helper.form_method = 'post'
         self.helper.layout = Layout(
             Row(
                 Column('first_name', css_class='form-group col-md-6 mb-0'),
@@ -44,6 +36,7 @@ class LoginForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
+        self.helper.form_method = 'post'
         self.helper.layout = Layout(
             'username',
             'password',
@@ -51,7 +44,6 @@ class LoginForm(AuthenticationForm):
         )
 
 class ProfileForm(forms.ModelForm):
-    #Requerimentos
     class Meta:
         model = User
         fields = ['first_name', 'last_name', 'email', 'phone', 'address', 'city', 'state', 'zipcode', 'country']
@@ -59,6 +51,8 @@ class ProfileForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        # Remove the Submit button from the form helper since we'll add it manually in the template
         self.helper.layout = Layout(
             Row(
                 Column('first_name', css_class='form-group col-md-6 mb-0'),
@@ -78,5 +72,82 @@ class ProfileForm(forms.ModelForm):
                 Column('country', css_class='form-group col-md-6 mb-0'),
                 css_class='form-row'
             ),
-            Submit('submit', 'Update Profile', css_class='btn btn-primary')
+        )
+
+# Checkout form example (you'll need to create this based on your Order model)
+class CheckoutForm(forms.Form):
+    # Billing Information
+    billing_name = forms.CharField(max_length=100, required=True)
+    billing_email = forms.EmailField(required=True)
+    billing_phone = forms.CharField(max_length=20, required=True)
+    billing_address = forms.CharField(widget=forms.Textarea(attrs={'rows': 3}), required=True)
+    billing_city = forms.CharField(max_length=100, required=True)
+    billing_state = forms.CharField(max_length=100, required=True)
+    billing_zipcode = forms.CharField(max_length=20, required=True)
+    billing_country = forms.CharField(max_length=100, required=True)
+    
+    # Shipping Information
+    same_as_billing = forms.BooleanField(required=False, initial=True, label="Shipping address is the same as billing")
+    shipping_name = forms.CharField(max_length=100, required=False)
+    shipping_address = forms.CharField(widget=forms.Textarea(attrs={'rows': 3}), required=False)
+    shipping_city = forms.CharField(max_length=100, required=False)
+    shipping_state = forms.CharField(max_length=100, required=False)
+    shipping_zipcode = forms.CharField(max_length=20, required=False)
+    shipping_country = forms.CharField(max_length=100, required=False)
+    
+    # Payment Information
+    PAYMENT_CHOICES = [
+        ('credit_card', 'Credit Card'),
+        ('paypal', 'PayPal'),
+        ('bank_transfer', 'Bank Transfer'),
+    ]
+    payment_method = forms.ChoiceField(choices=PAYMENT_CHOICES, required=True)
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_method = 'post'
+        self.helper.layout = Layout(
+            # Billing Information Section
+            '<h5><i class="fas fa-credit-card"></i> Billing Information</h5>',
+            Row(
+                Column('billing_name', css_class='form-group col-md-6 mb-0'),
+                Column('billing_email', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
+            'billing_phone',
+            'billing_address',
+            Row(
+                Column('billing_city', css_class='form-group col-md-6 mb-0'),
+                Column('billing_state', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
+            Row(
+                Column('billing_zipcode', css_class='form-group col-md-6 mb-0'),
+                Column('billing_country', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
+            
+            # Shipping Information Section
+            '<hr><h5><i class="fas fa-shipping-fast"></i> Shipping Information</h5>',
+            'same_as_billing',
+            Row(
+                Column('shipping_name', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
+            'shipping_address',
+            Row(
+                Column('shipping_city', css_class='form-group col-md-6 mb-0'),
+                Column('shipping_state', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
+            Row(
+                Column('shipping_zipcode', css_class='form-group col-md-6 mb-0'),
+                Column('shipping_country', css_class='form-group col-md-6 mb-0'),
+                css_class='form-row'
+            ),
+            
+            # Payment Information Section
+            '<hr><h5><i class="fas fa-payment"></i> Payment Method</h5>',
+            'payment_method',
         )
